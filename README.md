@@ -69,10 +69,10 @@ mimage=https://releases.rancher.com/os/latest/rancheros.iso
 dotoken=
 stackfile=swarmG.yml
 ```
-In this example, swarmG.yml doesn't exist so `swmart` won't deploy any container
+In this example, swarmG.yml doesn't exist so `swarmt` won't deploy any container
 
 Time to fire up our swarm cluster:  
-`./swmart.sh init` <=== yes ! that simple!  
+`./swarmt.sh init` <=== yes ! that simple!  
 
 Few minutes later, you should have this message:   
 `swarmG swarm cluster is up and running`  
