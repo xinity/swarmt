@@ -2,7 +2,8 @@
 a dead simple tool to manage your local swarm clusters
 
 ## Introduction:
-Swarmt has been written to offer a simple, extensible and yet powerful tool to manage local swarm clusters built using docker-machine.  
+Swarmt has been written to offer a simple, extensible and yet powerful tool to manage local swarm clusters 
+built using docker-machine.  
 
 ***note:*** as of 0.1 version swarmt support virtualbox, digital ocean is in alpha stage for now *(needs testers)*
 
@@ -23,7 +24,7 @@ Swarmt is self explained, you should see the default help below:
     -h    : show this help box 
     init  : create and initialize swarm cluster
     start : start an existing swarm cluster
-    list  : list existing nodes 
+    list  : list all existing nodes 
     stop  : Halt every swarm nodes 
     rm    : delete the swarm cluster 
 
