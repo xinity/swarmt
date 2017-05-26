@@ -47,11 +47,11 @@ usage() {
 create_machines(){
     for (( nm=1; nm<="${smanager}"; nm++ ))
       do
-        docker-machine create -d "${mdriver}" "${moption}" "${project}m${nm}";
+        docker-machine create -d "${mdriver}" "${doption}" "${project}m${nm}";
     done
     for (( nw=1; nw<="${sworker}"; nw++ ))
           do
-        docker-machine create -d "${mdriver}" "${moption}" "${project}w${nw}";
+        docker-machine create -d "${mdriver}" "${doption}" "${project}w${nw}";
     done
 } 2> /dev/null
 
@@ -219,9 +219,9 @@ main() {
   then
     if [ -n "${mimage}" ]
     then
-    moption="--virtualbox-boot2docker-url=${mimage}"
+    doption="--virtualbox-boot2docker-url=${mimage}"
     else
-    moption=''
+    doption=''
     fi
   else
     mdriver="digitalocean"
@@ -230,7 +230,7 @@ main() {
        echo "you must specify a Digital Ocean token in you ${cfg_file} file"
        exit 1
     else
-       moption="--digitalocean-access-token=${dotoken}"
+       doption="--digitalocean-access-token=${dotoken}"
     fi
   fi
 
