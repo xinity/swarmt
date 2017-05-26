@@ -25,8 +25,8 @@ cfg_file="$(echo ${0##*/} | sed 's/.sh/.conf/g')"
 # Interactive documentation
 usage() {
   echo " "
-  echo "================================================="
-  echo " $(basename ${0}) takes arguments described below: "
+  echo "=================================================="
+  echo " $(basename ${0}) takes arguments described below:"
   echo "    -h    : show this help box "
   echo "    init  : create and initialize swarm cluster "
   echo "    start : start an existing swarm cluster "
@@ -39,7 +39,7 @@ usage() {
   echo " "
   echo " By default the script will be looking "
   echo " for a config file named: swarmt.conf "
-  echo "================================================="
+  echo "=================================================="
   exit 0
 }
 
@@ -93,12 +93,14 @@ swarm_init(){
     if [ $? -eq 0 ]
     then
     echo " "
-    echo "==========================================="
-    echo " ${project} swarm cluster is up and running "
-    echo "==========================================="
+    echo -e "\033[0;31m ------------"
+    echo -e "\033[0;31m ${project} swarm cluster is up and running "
+    echo -e "\033[0;31m ------------"
     else
     echo " "
-    echo "something wen't wrong!"
+    echo -e "\033[0;31m ------------"
+    echo -e "\033[0;31m something wen't wrong!"
+    echo -e "\033[0;31m ------------"
     exit 1
     fi
 } 2> /dev/null
@@ -113,9 +115,9 @@ swarm_start(){
     if [ "${?}" -eq 0 ]
     then
     echo " "
-    echo "==================================="
-    echo " ${project} swarm cluster is ready "
-    echo "==================================="
+    echo -e "\033[0;32m ------------"
+    echo -e "\033[0;32m ${project} swarm cluster is ready "
+    echo -e "\033[0;32m ------------"
     fi
 } 2> /dev/null
 
@@ -128,9 +130,9 @@ start_stack(){
         if [ $? -eq 0 ]
         then
         echo " "
-        echo "==========================="
-        echo " ${project} stack is ready "
-        echo "==========================="
+        echo -e "\033[0;32m ------------"
+        echo -e "\033[0;32m ${project} stack is ready "
+        echo -e "\033[0;32m ------------"
         fi
     fi
 } 2> /dev/null
@@ -149,9 +151,9 @@ swarm_halt(){
     if [ "${?}" -eq 0 ]
     then
     echo " "
-    echo "==================================="
-    echo " ${project} swarm cluster is halted "
-    echo "==================================="
+    echo -e "\033[0;32m ------------"
+    echo -e "\033[0;32m ${project} swarm cluster is halted "
+    echo -e "\033[0;32m ------------"
     fi
 
 } 2> /dev/null
@@ -171,9 +173,9 @@ swarm_delete(){
     if [ "${?}" -eq 0 ]
     then
     echo " "
-    echo "==========================================="
-    echo " ${project} swarm cluster has been deleted "
-    echo "==========================================="
+    echo -e "\033[0;32m ------------"
+    echo -e "\033[0;32m ${project} swarm cluster has been deleted "
+    echo -e "\033[0;32m ------------"
    fi
 } 2> /dev/null
 
