@@ -181,7 +181,7 @@ swarm_delete_confirm(){
         * ) echo "Please answer yes or no.";;
     esac
 done
-} 2> /dev/null
+}
 # stop and delete all swarm nodes
 swarm_delete(){
     swarm_halt
