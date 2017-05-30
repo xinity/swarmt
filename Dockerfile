@@ -1,6 +1,6 @@
 FROM alpine:latest
 
-LABEL maintainer Rachid Zarouali (rzarouali@gmail.com)
+LABEL maintainer Rachid Zarouali (xinity77@gmail.com)
 
 RUN apk add --no-cache bash
 
