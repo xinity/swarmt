@@ -6,4 +6,6 @@ RUN apk add --no-cache bash
 
 COPY swarmt.sh /usr/local/bin/
 
+WORKDIR /srv
+
 ENTRYPOINT ["swarmt/swarmt.sh"]
