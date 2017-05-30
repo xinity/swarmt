@@ -53,7 +53,7 @@ machines_commands(){
       docker-machine ssh ${1} "$line"
     done < ${2}
   fi
-}
+} 2> /dev/null
 
 machines_join(){
   docker-machine ssh ${1} "docker swarm join \
@@ -61,7 +61,7 @@ machines_join(){
     --listen-addr $(docker-machine ip ${1}) \
     --advertise-addr $(docker-machine ip ${1}) \
     $(docker-machine ip ${project}m1)"
-}
+} 2> /dev/null
 
 # Create managers and worker nodes
 create_machines(){
@@ -75,7 +75,7 @@ create_machines(){
         docker-machine create -d ${mdriver} ${doption} ${eoption} ${project}w${nw};
         machines_commands ${project}w${nw} ${commands_w}
     done
-}
+} 2> /dev/null
 
 # initialize and bootstrap swarm cluster
 swarm_init(){
@@ -117,7 +117,7 @@ swarm_init(){
     echo -e "\033[0;31m ------------"
     exit 1
     fi
-}
+} 2> /dev/null
 
 # start an existing swarm cluster
 swarm_start(){
@@ -181,7 +181,7 @@ swarm_delete_confirm(){
         * ) echo "Please answer yes or no.";;
     esac
 done
-}
+} 2> /dev/null
 # stop and delete all swarm nodes
 swarm_delete(){
     swarm_halt
