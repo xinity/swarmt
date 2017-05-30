@@ -20,6 +20,7 @@
 # --------------------------------------------------------------------------- #
 
 #Initialize variables
+CURRENT_DIR="$(pwd -P)"
 cfg_file="$(echo ${0##*/} | sed 's/.sh/.conf/g')"
 
 # Interactive documentation
@@ -136,10 +137,10 @@ swarm_start(){
 
 # start a docker swarm stack if exists
 start_stack(){
-    if [ -f "${stackfile}" ]
+    if [ -f "${CURRENT_DIR}/${stackfile}" ]
     then
     eval "$(docker-machine env ${project}m1)"
-    docker stack deploy -c "${stackfile}" "${project}"
+    docker stack deploy -c "${CURRENT_DIR}/${stackfile}" "${project}"
         if [ $? -eq 0 ]
         then
         echo " "
@@ -171,6 +172,16 @@ swarm_halt(){
 
 } 2> /dev/null
 
+swarm_delete_confirm(){
+  while true; do
+    read -p "Do you REALLY wish to delete ${project} nodes ?" yn
+    case $yn in
+        [Yy]* ) swarm_delete; break;;
+        [Nn]* ) exit;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+}
 # stop and delete all swarm nodes
 swarm_delete(){
     swarm_halt
@@ -210,7 +221,7 @@ main() {
 
   if [ "${1}" == "-c" ]
   then
-      if [ -s "${2}" ] && [ -r "${2}" ]
+      if [ -s "${CURRENT_DIR}/${2}" ] && [ -r "${CURRENT_DIR}/${2}" ]
       then
       cfg_file="${2}"
       source "${cfg_file}"
@@ -221,7 +232,6 @@ main() {
 
       if [ "${1}" != "-c" ] && [ -s ${cfg_file} ] && [ -r ${cfg_file} ]
       then
-          echo "${1}"
           source "${cfg_file}"
       fi
       else
@@ -261,8 +271,7 @@ main() {
             swarm_halt
             ;;
         rm)
-            swarm_halt
-            swarm_delete
+            swarm_delete_confirm
             ;;
         list)
             swarm_list
