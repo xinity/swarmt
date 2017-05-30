@@ -1,6 +1,6 @@
 #!/bin/bash
 # shellcheck disable=SC1090
-# set -x
+set -x
 # ------------------------   Introduction   --------------------------------- #
 #
 # Name : swarmt.sh
@@ -223,7 +223,7 @@ main() {
   then
       if [ -s "${CURRENT_DIR}/${2}" ] && [ -r "${CURRENT_DIR}/${2}" ]
       then
-      cfg_file="${2}"
+      cfg_file="${CURRENT_DIR}/${2}"
       source "${cfg_file}"
       else
       echo "your configuration file is missing or is empty"
