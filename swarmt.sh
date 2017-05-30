@@ -43,17 +43,38 @@ usage() {
   exit 0
 }
 
+# Ability to pass command while creating machines
+machines_commands(){
+  if [ -f "${2}" ]
+  then
+    while IFS= read -r line
+    do
+      docker-machine ssh ${1} "$line"
+    done < ${2}
+  fi
+}
+
+machines_join(){
+  docker-machine ssh ${1} "docker swarm join \
+    --token=${2} \
+    --listen-addr $(docker-machine ip ${1}) \
+    --advertise-addr $(docker-machine ip ${1}) \
+    $(docker-machine ip ${project}m1)"
+}
+
 # Create managers and worker nodes
 create_machines(){
     for (( nm=1; nm<="${smanager}"; nm++ ))
       do
-        docker-machine create -d "${mdriver}" "${doption}" "${eoption}" "${project}m${nm}";
+        docker-machine create -d ${mdriver} ${doption} ${eoption} ${project}m${nm};
+        machines_commands ${project}m${nm} ${commands_m}
     done
     for (( nw=1; nw<="${sworker}"; nw++ ))
-          do
-        docker-machine create -d "${mdriver}" "${doption}" "${eoption}" "${project}w${nw}";
+      do
+        docker-machine create -d ${mdriver} ${doption} ${eoption} ${project}w${nw};
+        machines_commands ${project}w${nw} ${commands_w}
     done
-} 2> /dev/null
+}
 
 # initialize and bootstrap swarm cluster
 swarm_init(){
@@ -68,34 +89,26 @@ swarm_init(){
     manager_token="$(docker-machine ssh ${project}m1 docker swarm \
     join-token manager -q)"
 
-    export worker_token manager_token
+#    export worker_token manager_token
 
     #make other managers join the cluster
     for (( nm=2; nm<=${smanager}; nm++ ))
     do
-       docker-machine ssh ${project}m$nm "docker swarm join \
-         --token=${manager_token} \
-         --listen-addr $(docker-machine ip ${project}m$nm) \
-         --advertise-addr $(docker-machine ip ${project}m$nm) \
-         $(docker-machine ip ${project}m1)"
+      machines_join ${project}m$nm ${manager_token}
     done
 
     #make workers join the cluster
     for (( nw=1; nw<=${sworker}; nw++ ))
     do
-       docker-machine ssh ${project}w$nw "docker swarm join \
-       --token=${worker_token} \
-       --listen-addr $(docker-machine ip ${project}w$nw) \
-       --advertise-addr $(docker-machine ip ${project}w$nw) \
-       $(docker-machine ip ${project}m1)"
+      machines_join ${project}w$nw ${worker_token}
     done
 
     if [ $? -eq 0 ]
     then
     echo " "
-    echo -e "\033[0;31m ------------"
-    echo -e "\033[0;31m ${project} swarm cluster is up and running "
-    echo -e "\033[0;31m ------------"
+    echo -e "\033[0;32m ------------"
+    echo -e "\033[0;32m ${project} swarm cluster is up and running "
+    echo -e "\033[0;32m ------------"
     else
     echo " "
     echo -e "\033[0;31m ------------"
@@ -103,7 +116,7 @@ swarm_init(){
     echo -e "\033[0;31m ------------"
     exit 1
     fi
-} 2> /dev/null
+}
 
 # start an existing swarm cluster
 swarm_start(){
@@ -221,7 +234,7 @@ main() {
     then
     doption="--virtualbox-boot2docker-url=${mimage}"
     else
-    doption=''
+    doption=
     fi
   else
     mdriver="digitalocean"
@@ -254,11 +267,14 @@ main() {
         list)
             swarm_list
             ;;
+        command)
+            machines_commands swarm1m1 worker.conf
+            ;;
         *)
             usage
             ;;
     esac
-} 2> /dev/null
+}
 
 # ----  MAIN  --------------------------------------------------------------- #
 main "$@"
