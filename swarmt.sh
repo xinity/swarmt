@@ -50,7 +50,8 @@ machines_commands(){
   then
     while IFS= read -r line
     do
-      docker-machine ssh ${1} "$line"
+      docker-machine ssh ${1} "$line" </dev/null
+      sleep 5
     done < ${2}
   fi
 } 2> /dev/null
@@ -119,6 +120,30 @@ swarm_init(){
     fi
 } 2> /dev/null
 
+# add label if needed to swarm nodes (Labels for workers ONLY)
+## DO NOT PUT YOUR MANAGERS ONLINE
+swarm_label(){
+    swarm_nodes=$(docker-machine ls | grep ${project}w | awk '{print$1}')
+    eval "$(docker-machine env ${project}m1)"
+    for i in $swarm_nodes
+      do 
+        if [ ! -z $(grep -w "$i" "$labelsrc") ]
+        then
+          lbl=$(grep -w "$i" "$labelsrc" | awk -F'=' '{print$2}');
+          echo "${i} swarm node Label is: $lbl"; 
+          docker node update --label-add zone=${lbl} $i;
+          echo " "
+          fi
+    done
+
+    if [ "${?}" -eq 0 ]
+    then
+    echo " "
+    echo -e "\033[0;32m ------------"
+    echo -e "\033[0;32m ${project} swarm cluster is ready "
+    echo -e "\033[0;32m ------------"
+    fi
+}
 # start an existing swarm cluster
 swarm_start(){
     swarm_nodes=$(docker-machine ls | grep ${project} | awk '{print$1}')
@@ -182,6 +207,7 @@ swarm_delete_confirm(){
     esac
 done
 }
+
 # stop and delete all swarm nodes
 swarm_delete(){
     swarm_halt
@@ -262,6 +288,7 @@ main() {
         init)
             create_machines
             swarm_init
+            swarm_label
             start_stack
             ;;
         start)
@@ -276,8 +303,11 @@ main() {
         list)
             swarm_list
             ;;
-        command)
-            machines_commands swarm1m1 worker.conf
+        label)
+            swarm_label
+            ;;
+        start_stack)
+            start_stack
             ;;
         *)
             usage
