@@ -44,6 +44,7 @@ usage() {
   exit 0
 }
 
+
 # Ability to pass command while creating machines
 machines_commands(){
   if [ -f "${2}" ]
@@ -56,6 +57,34 @@ machines_commands(){
   fi
 } 2> /dev/null
 
+# Up scaling Swarm cluster
+scaler(){
+symbol=${1::1}
+number=${1:1:2}
+if [ "${symbol}" == u ]
+then
+  echo "sens : ${symbol} et nombre: ${number}
+  create_machines ${sworker}=$((sworker+=1))"
+elif [[ "${symbol}" == d ]]; then
+  worker=${1:1:2}
+  echo "sens : ${symbol} et nombre: ${number}
+  eval $(docker-machine env ${worker})
+  docker node update --availability drain ${worker}
+  docker node rm ${worker}
+  "
+fi
+}
+
+swarm_scale(){
+  while true; do
+    read -p "how many nodes ?" ud
+    case $ud in
+        [u]* ) scaler $ud; break;;
+        [d]* ) scaler $ud; break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+  done
+}
 machines_join(){
   docker-machine ssh ${1} "docker swarm join \
     --token=${2} \
@@ -64,17 +93,24 @@ machines_join(){
     $(docker-machine ip ${project}m1)"
 } 2> /dev/null
 
-# Create managers and worker nodes
+# machine creation
 create_machines(){
+  docker-machine create -d ${mdriver} ${doption} ${eoption} ${1};
+  if [ ! -z ${commands_m} ] && [ -r ${commands_m} ]
+  then
+  machines_commands ${1} ${commands_m}
+  fi
+}
+
+# Create managers and worker nodes
+swmarm_build(){
     for (( nm=1; nm<="${smanager}"; nm++ ))
       do
-        docker-machine create -d ${mdriver} ${doption} ${eoption} ${project}m${nm};
-        machines_commands ${project}m${nm} ${commands_m}
+        create_machines ${project}m${nm}
     done
     for (( nw=1; nw<="${sworker}"; nw++ ))
       do
-        docker-machine create -d ${mdriver} ${doption} ${eoption} ${project}w${nw};
-        machines_commands ${project}w${nw} ${commands_w}
+        create_machines ${project}w${nw}
     done
 } 2> /dev/null
 
@@ -90,8 +126,6 @@ swarm_init(){
 
     manager_token="$(docker-machine ssh ${project}m1 docker swarm \
     join-token manager -q)"
-
-#    export worker_token manager_token
 
     #make other managers join the cluster
     for (( nm=2; nm<=${smanager}; nm++ ))
@@ -126,11 +160,11 @@ swarm_label(){
     swarm_nodes=$(docker-machine ls | grep ${project}w | awk '{print$1}')
     eval "$(docker-machine env ${project}m1)"
     for i in $swarm_nodes
-      do 
-        if [ ! -z $(grep -w "$i" "$labelsrc") ]
+      do
+        if [ ! -z "$(grep -w "$i" "$labelsrc")" ]
         then
           lbl=$(grep -w "$i" "$labelsrc" | awk -F'=' '{print$2}');
-          echo "${i} swarm node Label is: $lbl"; 
+          echo "${i} swarm node Label is: $lbl";
           docker node update --label-add zone=${lbl} $i;
           echo " "
           fi
@@ -143,7 +177,7 @@ swarm_label(){
     echo -e "\033[0;32m ${project} swarm cluster is ready "
     echo -e "\033[0;32m ------------"
     fi
-}
+} 2> /dev/null
 # start an existing swarm cluster
 swarm_start(){
     swarm_nodes=$(docker-machine ls | grep ${project} | awk '{print$1}')
@@ -174,7 +208,7 @@ start_stack(){
         echo -e "\033[0;32m ------------"
         fi
     fi
-} 2> /dev/null
+}
 
 # stop all swarm nodes nodes
 swarm_halt(){
@@ -231,7 +265,7 @@ swarm_delete(){
 
 # list all existing swarm nodes in all configuration files
 swarm_list(){
-    project_list=$(grep -h "project" *.conf | awk -F'=' '{print$2}')
+    project_list=$(grep -h "project=" *.conf | awk -F'=' '{print$2}')
     for i in ${project_list}
       do echo "${i} swarm nodes:"; docker-machine ls | grep "${i}";echo " "
     done
@@ -293,6 +327,7 @@ main() {
             ;;
         start)
             swarm_start
+            start_stack
             ;;
         stop)
             swarm_halt
@@ -303,11 +338,8 @@ main() {
         list)
             swarm_list
             ;;
-        label)
-            swarm_label
-            ;;
-        start_stack)
-            start_stack
+        scale)
+            swarm_scale
             ;;
         *)
             usage
