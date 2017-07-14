@@ -1,6 +1,6 @@
 #!/bin/bash
 # shellcheck disable=SC1090
-set -x
+#set -x
 # ------------------------   Introduction   --------------------------------- #
 #
 # Name : swarmt.sh
@@ -55,7 +55,7 @@ machines_commands(){
       sleep 5
     done < ${2}
   fi
-} 2> /dev/null
+}
 
 # Up scaling Swarm cluster
 scaler(){
@@ -63,8 +63,12 @@ symbol=${1::1}
 number=${1:1:2}
 if [ "${symbol}" == u ]
 then
-  echo "sens : ${symbol} et nombre: ${number}
-  create_machines ${sworker}=$((sworker+=1))"
+  echo "sens : ${symbol} et nombre: ${number}"
+  #TODO: recuperer le numéro le plus haut des workers et incrementer 
+  sworker=$(grep sworker )
+  echo "create_machines ${sworker}=$((sworker+=1))"
+        create_machines ${project}w${nw}
+
 elif [[ "${symbol}" == d ]]; then
   worker=${1:1:2}
   echo "sens : ${symbol} et nombre: ${number}
@@ -96,16 +100,22 @@ machines_join(){
 # machine creation
 create_machines(){
   docker-machine create -d ${mdriver} ${doption} ${eoption} ${1};
-  if [ ! -z ${commands_m} ] && [ -r ${commands_m} ]
+  if [ ${1} == ${project}m${nm} ] && [ ! -z "${commands_m}" ] && [ -r "${commands_m}" ]
   then
-  machines_commands ${1} ${commands_m}
+    echo ${project}m${nm}
+    machines_commands ${1} ${commands_m}
+  elif [ ${1} == ${project}w${nw} ] && [ ! -z "${commands_w}" ] && [ -r "${commands_w}" ];
+  then
+    echo ${project}w${nw}
+    machines_commands ${1} ${commands_w}
   fi
 }
 
 # Create managers and worker nodes
-swmarm_build(){
+swarm_build(){
     for (( nm=1; nm<="${smanager}"; nm++ ))
       do
+        echo ${project}m${nm}
         create_machines ${project}m${nm}
     done
     for (( nw=1; nw<="${sworker}"; nw++ ))
@@ -320,7 +330,7 @@ main() {
   param=${!#}
     case "${param}" in
         init)
-            create_machines
+            swarm_build
             swarm_init
             swarm_label
             start_stack
