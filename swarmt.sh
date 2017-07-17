@@ -1,6 +1,6 @@
 #!/bin/bash
-# shellcheck disable=SC1090
-#set -x
+# shellcheck disable=SC1090,SC2086
+set -x
 # ------------------------   Introduction   --------------------------------- #
 #
 # Name : swarmt.sh
@@ -79,9 +79,9 @@ elif [[ "${symbol}" == d ]]; then
 fi
 }
 
-swarm_scale(){
+menu_scale(){
   while true; do
-    read -p "how many nodes ?" ud
+    read -r -p "how many nodes ?" ud
     case $ud in
         [u]* ) scaler $ud; break;;
         [d]* ) scaler $ud; break;;
@@ -141,67 +141,48 @@ swarm_init(){
     for (( nm=2; nm<=${smanager}; nm++ ))
     do
       machines_join ${project}m$nm ${manager_token}
+#      swarm_label ${project}m$nm
     done
 
     #make workers join the cluster
     for (( nw=1; nw<=${sworker}; nw++ ))
     do
       machines_join ${project}w$nw ${worker_token}
-    done
-
-    if [ $? -eq 0 ]
-    then
-    echo " "
-    echo -e "\033[0;32m ------------"
-    echo -e "\033[0;32m ${project} swarm cluster is up and running "
-    echo -e "\033[0;32m ------------"
-    else
-    echo " "
-    echo -e "\033[0;31m ------------"
-    echo -e "\033[0;31m something wen't wrong!"
-    echo -e "\033[0;31m ------------"
-    exit 1
-    fi
+#      swarm_label ${project}w$nw      
+    done    
 } 2> /dev/null
 
-# add label if needed to swarm nodes (Labels for workers ONLY)
-## DO NOT PUT YOUR MANAGERS ONLINE
+# add label to swarm nodes 
+## WARNING: DO NOT PUT YOUR MANAGERS ONLINE 
 swarm_label(){
     swarm_nodes=$(docker-machine ls | grep ${project}w | awk '{print$1}')
     eval "$(docker-machine env ${project}m1)"
-    for i in $swarm_nodes
-      do
-        if [ ! -z "$(grep -w "$i" "$labelsrc")" ]
-        then
-          lbl=$(grep -w "$i" "$labelsrc" | awk -F'=' '{print$2}');
-          echo "${i} swarm node Label is: $lbl";
-          docker node update --label-add zone=${lbl} $i;
-          echo " "
+        if [ "$(grep -q -w "$1" "$labelsrc")" ]
+          then
+          if [[ ${1} == ${project}m* ]]
+            then
+            echo -e "\e[33mWARNING: a label will be added to a manager node"
           fi
-    done
-
-    if [ "${?}" -eq 0 ]
-    then
-    echo " "
-    echo -e "\033[0;32m ------------"
-    echo -e "\033[0;32m ${project} swarm cluster is ready "
-    echo -e "\033[0;32m ------------"
-    fi
+          lblkey=$(grep -w "$1" "$labelsrc" | awk -F'=' '{print$1}');
+          lblvalue=$(grep -w "$1" "$labelsrc" | awk -F'=' '{print$2}');
+          echo "${1} swarm node Label is: ${lblkey}=${lblvalue}";
+          docker node update --label-add ${lblkey}=${lblvalue} $1;
+          echo " "
+        fi
 } 2> /dev/null
+
 # start an existing swarm cluster
 swarm_start(){
     swarm_nodes=$(docker-machine ls | grep ${project} | awk '{print$1}')
     for i in $swarm_nodes
-      do echo "${i} swarm node is starting :"; docker-machine start $i;echo " "
+      do if echo "${i} swarm node is starting :"; docker-machine start $i;echo " "
+          then
+          echo " "
+          echo -e "\033[0;32m ------------"
+          echo -e "\033[0;32m ${project} swarm cluster is ready "
+          echo -e "\033[0;32m ------------"
+         fi
     done
-
-    if [ "${?}" -eq 0 ]
-    then
-    echo " "
-    echo -e "\033[0;32m ------------"
-    echo -e "\033[0;32m ${project} swarm cluster is ready "
-    echo -e "\033[0;32m ------------"
-    fi
 } 2> /dev/null
 
 # start a docker swarm stack if exists
@@ -209,8 +190,7 @@ start_stack(){
     if [ -f "${CURRENT_DIR}/${stackfile}" ]
     then
     eval "$(docker-machine env ${project}m1)"
-    docker stack deploy -c "${CURRENT_DIR}/${stackfile}" "${project}"
-        if [ $? -eq 0 ]
+        if docker stack deploy -c "${CURRENT_DIR}/${stackfile}" "${project}"
         then
         echo " "
         echo -e "\033[0;32m ------------"
@@ -220,6 +200,31 @@ start_stack(){
     fi
 }
 
+# start either a CLI or a webui depending of user choice
+# cli start dry
+# webui start swarmpit
+swarm_manage(){
+  while true; do
+    read -r -p "choose between : cli(c) or webui(w) management tool ?" cw
+    case $cw in
+        [Cc]* ) dry_manager; break;;
+        [Ww]* ) portainer_manager; break;;
+        * ) echo "Please choose betwenn cli(c) or webui(w) ";;
+    esac
+done
+}
+
+dry_manager(){
+DCERT=$(docker-machine env swarm1m1 | grep CERT | awk '{print$2}')
+DHOST=$(docker-machine env swarm1m1 | grep HOST | awk '{print$2}')
+DRY_CERT=$( echo ${DCERT} | awk -F'=' '{print$2}')
+docker run -it -e ${DHOST} -e ${DCERT} -v ${DRY_CERT}:${DRY_CERT} moncho/dry sh
+}
+
+portainer_manager(){
+docker run -d -p 9000:9000 portainer/portainer -H tcp://"$(docker-machine ip ${project}m1)":2376
+xdg-open http://localhost:9000
+}
 # stop all swarm nodes nodes
 swarm_halt(){
     for (( nm=1; nm<="${smanager}"; nm++ ))
@@ -227,23 +232,20 @@ swarm_halt(){
         docker-machine stop "${project}m${nm}";
     done
     for (( nw=1; nw<="${sworker}"; nw++ ))
-      do
-        docker-machine stop "${project}w${nw}";
+      do  
+        if docker-machine stop "${project}w${nw}";
+          then
+            echo " "
+            echo -e "\033[0;32m ------------"
+            echo -e "\033[0;32m ${project} swarm cluster is halted "
+            echo -e "\033[0;32m ------------"
+        fi
     done
-
-    if [ "${?}" -eq 0 ]
-    then
-    echo " "
-    echo -e "\033[0;32m ------------"
-    echo -e "\033[0;32m ${project} swarm cluster is halted "
-    echo -e "\033[0;32m ------------"
-    fi
-
 } 2> /dev/null
 
-swarm_delete_confirm(){
+menu_delete(){
   while true; do
-    read -p "Do you REALLY wish to delete ${project} nodes ?" yn
+    read -r -p "Do you REALLY wish to delete ${project} nodes ?" yn
     case $yn in
         [Yy]* ) swarm_delete; break;;
         [Nn]* ) exit;;
@@ -261,21 +263,19 @@ swarm_delete(){
     done
     for (( nw=1; nw<="${sworker}"; nw++ ))
       do
-        docker-machine rm "${project}w${nw}" -f;
-    done
-
-    if [ "${?}" -eq 0 ]
-    then
-    echo " "
-    echo -e "\033[0;32m ------------"
-    echo -e "\033[0;32m ${project} swarm cluster has been deleted "
-    echo -e "\033[0;32m ------------"
-   fi
+        if docker-machine rm "${project}w${nw}" -f;
+          then
+            echo " "
+            echo -e "\033[0;32m ------------"
+            echo -e "\033[0;32m ${project} swarm cluster has been deleted "
+            echo -e "\033[0;32m ------------"
+        fi
+   done
 } 2> /dev/null
 
 # list all existing swarm nodes in all configuration files
 swarm_list(){
-    project_list=$(grep -h "project=" *.conf | awk -F'=' '{print$2}')
+    project_list=$(grep -h "project=" ./*.conf | awk -F'=' '{print$2}')
     for i in ${project_list}
       do echo "${i} swarm nodes:"; docker-machine ls | grep "${i}";echo " "
     done
@@ -299,12 +299,11 @@ main() {
       echo "your configuration file is missing or is empty"
       exit 1
       fi
-
       if [ "${1}" != "-c" ] && [ -s ${cfg_file} ] && [ -r ${cfg_file} ]
       then
           source "${cfg_file}"
       fi
-      else
+  else
        source "${cfg_file}"
   fi
 
@@ -332,7 +331,6 @@ main() {
         init)
             swarm_build
             swarm_init
-            swarm_label
             start_stack
             ;;
         start)
@@ -343,13 +341,16 @@ main() {
             swarm_halt
             ;;
         rm)
-            swarm_delete_confirm
+            menu_delete
             ;;
         list)
             swarm_list
             ;;
         scale)
-            swarm_scale
+            menu_scale
+            ;;
+        manage)
+            swarm_manage
             ;;
         *)
             usage
